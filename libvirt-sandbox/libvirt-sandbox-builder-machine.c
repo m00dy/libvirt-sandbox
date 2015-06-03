@@ -497,12 +497,13 @@ static gboolean gvir_sandbox_builder_machine_construct_devices(GVirSandboxBuilde
 {
     GVirConfigDomainFilesys *fs;
     GVirConfigDomainDisk *disk;
+    GVirConfigDomainDiskDriver *diskDriver;
     GVirConfigDomainInterface *iface;
     GVirConfigDomainMemballoon *ball;
     GVirConfigDomainConsole *con;
     GVirConfigDomainSerial *ser;
     GVirConfigDomainChardevSourcePty *src;
-    GList *tmp = NULL, *mounts = NULL, *networks = NULL;
+    GList *tmp = NULL, *mounts = NULL, *networks = NULL, *disks = NULL;
     size_t nHostBind = 0;
     size_t nHostImage = 0;
     gchar *configdir = g_strdup_printf("%s/config", statedir);
@@ -511,6 +512,30 @@ static gboolean gvir_sandbox_builder_machine_construct_devices(GVirSandboxBuilde
     if (!GVIR_SANDBOX_BUILDER_CLASS(gvir_sandbox_builder_machine_parent_class)->
         construct_devices(builder, config, statedir, domain, error))
         goto cleanup;
+
+    tmp = disks = gvir_sandbox_config_get_disks(config);
+    while(tmp){
+       	GVirSandboxConfigDisk *dconfig = GVIR_SANDBOX_CONFIG_DISK(tmp->data);
+
+        if (GVIR_SANDBOX_IS_CONFIG_DISK(dconfig)){
+
+            disk = gvir_config_domain_disk_new();
+            diskDriver = gvir_config_domain_disk_driver_new();
+            gvir_config_domain_disk_set_type(disk,gvir_sandbox_config_disk_get_disktype(dconfig));
+            gvir_config_domain_disk_driver_set_format(diskDriver,gvir_sandbox_config_disk_get_diskformat(dconfig));
+            gvir_config_domain_disk_set_source(disk,gvir_sandbox_config_disk_get_source(dconfig));
+            gvir_config_domain_disk_set_target_bus(disk,GVIR_CONFIG_DOMAIN_DISK_BUS_IDE);
+            gvir_config_domain_disk_set_target_dev(disk,gvir_sandbox_config_disk_get_target(dconfig));
+            gvir_config_domain_disk_set_driver(disk,diskDriver);
+            gvir_config_domain_add_device(domain,GVIR_CONFIG_DOMAIN_DEVICE(disk));
+            g_object_unref(disk);
+        }
+    tmp = tmp->next;
+    }
+
+    g_list_foreach(disks, (GFunc)g_object_unref, NULL);
+    g_list_free(disks);
+
 
     fs = gvir_config_domain_filesys_new();
     gvir_config_domain_filesys_set_type(fs, GVIR_CONFIG_DOMAIN_FILESYS_MOUNT);
