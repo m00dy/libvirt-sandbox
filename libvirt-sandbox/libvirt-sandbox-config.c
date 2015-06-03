@@ -62,6 +62,7 @@ struct _GVirSandboxConfigPrivate
 
     GList *networks;
     GList *mounts;
+    GList *disks;
 
     gchar *secLabel;
     gboolean secDynamic;
@@ -273,6 +274,9 @@ static void gvir_sandbox_config_finalize(GObject *object)
 
     g_list_foreach(priv->networks, (GFunc)g_object_unref, NULL);
     g_list_free(priv->networks);
+
+    g_list_foreach(priv->disks, (GFunc)g_object_unref, NULL);
+    g_list_free(priv->disks);
 
 
     g_free(priv->name);
@@ -1137,6 +1141,177 @@ gboolean gvir_sandbox_config_has_networks(GVirSandboxConfig *config)
 {
     GVirSandboxConfigPrivate *priv = config->priv;
     return priv->networks ? TRUE : FALSE;
+}
+
+
+/**
+ * gvir_sandbox_config_add_disk:
+ * @config: (transfer none): the sandbox config
+ * @dsk: (transfer none): the disk configuration
+ *
+ * Adds a new custom disk to the sandbox
+ *
+ */
+void gvir_sandbox_config_add_disk(GVirSandboxConfig *config,
+                                   GVirSandboxConfigDisk *dsk)
+{
+    GVirSandboxConfigPrivate *priv = config->priv;
+
+    g_object_ref(dsk);
+
+    priv->disks = g_list_append(priv->disks, dsk);
+}
+
+
+/**
+ * gvir_sandbox_config_get_disks:
+ * @config: (transfer none): the sandbox config
+ *
+ * Retrieves the list of custom disks in the sandbox
+ *
+ * Returns: (transfer full) (element-type GVirSandboxConfigMount): the list of disks
+ */
+GList *gvir_sandbox_config_get_disks(GVirSandboxConfig *config)
+{
+    GVirSandboxConfigPrivate *priv = config->priv;
+    g_list_foreach(priv->disks, (GFunc)g_object_ref, NULL);
+    return g_list_copy(priv->disks);
+}
+
+
+/**
+ * gvir_sandbox_config_add_disk_strv:
+ * @config: (transfer none): the sandbox config
+ * @disks: (transfer none)(array zero-terminated=1): the list of disks
+ *
+ * Parses @disks whose elements are in the format TYPE:TARGET=SOURCE
+ * creating #GVirSandboxConfigMount instances for each element. For
+ * example
+ *
+ * - file:hda=/var/lib/sandbox/demo/tmp.qcow2:qcow2
+ */
+gboolean gvir_sandbox_config_add_disk_strv(GVirSandboxConfig *config,
+                                           gchar **disks,
+                                           GError **error)
+{
+    gsize i = 0;
+    while (disks && disks[i]) {
+        if (!gvir_sandbox_config_add_disk_opts(config,
+                                               disks[i],
+                                               error))
+            return FALSE;
+        i++;
+    }
+    return TRUE;
+}
+
+
+/**
+ * gvir_sandbox_config_add_disk_opts:
+ * @config: (transfer none): the sandbox config
+ * @disk: (transfer none): the disk config
+ *
+ * Parses @disk in the format TYPE:TARGET=SOURCE
+ * creating #GVirSandboxConfigDisk instances for each element. For
+ * example
+ *
+ * - file:hda=/var/lib/sandbox/demo/tmp.qcow2:qcow2
+ */
+
+gboolean gvir_sandbox_config_add_disk_opts(GVirSandboxConfig *config,
+                                           const char *disk,
+                                           GError **error)
+{
+    gchar *target = NULL;
+    const gchar *source = NULL;
+    GVirSandboxConfigDisk *dsk;
+    gchar *tmp;
+    GVirConfigDomainDisk *diskType;
+    GVirConfigDomainDiskDriver *diskDriver;
+    gchar *format;
+
+    diskType = gvir_config_domain_disk_new();
+    diskDriver = gvir_config_domain_disk_driver_new();
+
+    tmp = strchr(disk, ':');
+
+    if (!tmp) {
+        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
+                    _("No disk type prefix on %s"), disk);
+       	return FALSE;
+    }
+    if (strncmp(disk, "file", (tmp - disk)) == 0) {
+       	gvir_config_domain_disk_set_type(diskType,GVIR_CONFIG_DOMAIN_DISK_FILE);
+    }
+    else if (strncmp(disk, "block", (tmp - disk)) == 0) {
+        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
+                    _("Unimplemented disk type prefix on %s"), disk);
+        return FALSE;
+    }
+    else if (strncmp(disk, "dir", (tmp - disk)) == 0) {
+        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
+                    _("Unimplemented disk type prefix on %s"), disk);
+        return FALSE;
+    }
+    else if (strncmp(disk, "network", (tmp - disk)) == 0) {
+        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
+                    _("Unimplemented disk type prefix on %s"), disk);
+       	return FALSE;
+    }
+    else {
+        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
+                    _("Unknown disk type prefix on %s"), disk);
+        return FALSE;
+    }
+
+    target = g_strdup(tmp + 1);
+
+    if ((tmp = strchr(target, '=')) != NULL) {
+        *tmp = '\0';
+        source = tmp + 1;
+    }
+
+    if (!tmp) {
+        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
+                    _("Missing disk source string on %s"), disk);
+        return FALSE;
+    }
+    if ((format = strchr(source, ':')) != NULL) {
+        *format = '\0';
+        format = format + 1;
+    }
+
+    if (!format) {
+        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
+                    _("Missing disk format string on %s"), disk);
+        return FALSE;
+    }
+
+    if (strncmp(format,"qcow2",5) == 0) {
+       gvir_config_domain_disk_driver_set_format(diskDriver,GVIR_CONFIG_DOMAIN_DISK_FORMAT_QCOW2);
+    }
+    else {
+        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
+                    _("Unimplemented disk format string on %s"), format);
+       	return FALSE;
+    }
+
+    dsk = GVIR_SANDBOX_CONFIG_DISK(g_object_new(GVIR_SANDBOX_TYPE_CONFIG_DISK,
+                                                "disktype",diskType,
+                                                "target", target,
+                                                "source", source,
+                                                "diskdriver", diskDriver,
+                                                NULL));
+
+    gvir_sandbox_config_add_disk(config, dsk);
+
+    g_object_unref(dsk);
+    g_object_unref(diskType);
+    g_object_unref(diskDriver);
+
+    g_free(target);
+
+    return TRUE;
 }
 
 
