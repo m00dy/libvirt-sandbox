@@ -38,6 +38,36 @@
 #define GVIR_SANDBOX_CONFIG_DISK_GET_PRIVATE(obj)                      \
     (G_TYPE_INSTANCE_GET_PRIVATE((obj), GVIR_SANDBOX_TYPE_CONFIG_DISK, GVirSandboxConfigDiskPrivate))
 
+/* This array contains string values for GVirConfigDomainDiskType,
+ * order is important.*/
+static const gchar *TYPES_STRINGS[] = {
+    "file",
+    "block",
+    "dir",
+    "network",
+    NULL
+};
+
+/* This array contains string values for GVirConfigDomainDiskFormat,
+ * order is important.*/
+static const gchar *FORMATS_STRINGS[] = {
+    "raw",
+    "dir",
+    "bochs",
+    "cloop",
+    "cow",
+    "dmg",
+    "iso",
+    "qcow",
+    "qcow2",
+    "qed",
+    "vmdk",
+    "vpc",
+    "fat",
+    "vhd",
+    NULL
+};
+
 struct _GVirSandboxConfigDiskPrivate
 {
     GVirConfigDomainDisk *diskType;
@@ -263,6 +293,40 @@ const gchar *gvir_sandbox_config_disk_get_source(GVirSandboxConfigDisk *config)
 {
     GVirSandboxConfigDiskPrivate *priv = config->priv;
     return priv->source;
+}
+
+const gchar *gvir_sandbox_config_disk_type_to_str(GVirConfigDomainDiskType type)
+{
+    return TYPES_STRINGS[type];
+}
+
+gint gvir_sandbox_config_disk_type_from_str(const gchar *value)
+{
+    gint i = 0;
+
+    while (TYPES_STRINGS[i] != NULL) {
+        if (strcmp(TYPES_STRINGS[i], value) == 0)
+            return i;
+        i++;
+    }
+    return -1;
+}
+
+gint gvir_sandbox_config_disk_format_from_str(const gchar *value)
+{
+    gint i = 0;
+
+    while (FORMATS_STRINGS[i] != NULL) {
+        if (strcmp(FORMATS_STRINGS[i], value) == 0)
+            return i;
+        i++;
+    }
+    return -1;
+}
+
+const gchar *gvir_sandbox_config_disk_format_to_str(GVirConfigDomainDiskFormat format)
+{
+    return FORMATS_STRINGS[format];
 }
 
 

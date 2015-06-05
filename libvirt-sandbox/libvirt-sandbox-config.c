@@ -1219,97 +1219,90 @@ gboolean gvir_sandbox_config_add_disk_strv(GVirSandboxConfig *config,
  */
 
 gboolean gvir_sandbox_config_add_disk_opts(GVirSandboxConfig *config,
-                                           const char *disk,
+                                           const char *opt,
                                            GError **error)
 {
+    gchar *type = NULL;
     gchar *target = NULL;
-    const gchar *source = NULL;
-    GVirSandboxConfigDisk *dsk;
+    gchar *source = NULL;
+    GVirSandboxConfigDisk *diskConfig;
     gchar *tmp;
-    GVirConfigDomainDisk *diskType;
+    GVirConfigDomainDisk *disk;
+    gint diskType, diskFormat;
     GVirConfigDomainDiskDriver *diskDriver;
-    gchar *format;
+    gchar *format = NULL;
 
-    diskType = gvir_config_domain_disk_new();
+    disk = gvir_config_domain_disk_new();
     diskDriver = gvir_config_domain_disk_driver_new();
 
-    tmp = strchr(disk, ':');
+    if (!(type = g_strdup(opt)))
+        return FALSE;
+
+    tmp = strchr(type, ':');
 
     if (!tmp) {
         g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
-                    _("No disk type prefix on %s"), disk);
+                    _("No disk type prefix on %s"), opt);
        	return FALSE;
     }
-    if (strncmp(disk, "file", (tmp - disk)) == 0) {
-       	gvir_config_domain_disk_set_type(diskType,GVIR_CONFIG_DOMAIN_DISK_FILE);
-    }
-    else if (strncmp(disk, "block", (tmp - disk)) == 0) {
+
+    *tmp = '\0';
+    source = tmp + 1;
+    if ((diskType = gvir_sandbox_config_disk_type_from_str(type)) < 0) {
         g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
-                    _("Unimplemented disk type prefix on %s"), disk);
-        return FALSE;
-    }
-    else if (strncmp(disk, "dir", (tmp - disk)) == 0) {
-        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
-                    _("Unimplemented disk type prefix on %s"), disk);
-        return FALSE;
-    }
-    else if (strncmp(disk, "network", (tmp - disk)) == 0) {
-        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
-                    _("Unimplemented disk type prefix on %s"), disk);
-       	return FALSE;
-    }
-    else {
-        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
-                    _("Unknown disk type prefix on %s"), disk);
+                    _("Unknown disk type prefix on %s"), opt);
         return FALSE;
     }
 
-    target = g_strdup(tmp + 1);
+    switch (diskType) {
+        case GVIR_CONFIG_DOMAIN_DISK_FILE:
+            gvir_config_domain_disk_set_type(disk,GVIR_CONFIG_DOMAIN_DISK_FILE);
+            break;
+        default:
+            g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
+                        _("Unimplemented disk type prefix on %s"), opt);
+            return FALSE;
+    }
 
-    if ((tmp = strchr(target, '=')) != NULL) {
+
+    if (!(tmp = strchr(source, '='))) {
+        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
+                    _("Missing disk source string on %s"), opt);
+        return FALSE;
+    }
+
+    *tmp = '\0';
+    target = tmp + 1;
+    
+    if ((tmp = strchr(target, ':')) != NULL) {
         *tmp = '\0';
-        source = tmp + 1;
+        format = tmp + 1;
     }
 
-    if (!tmp) {
-        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
-                    _("Missing disk source string on %s"), disk);
-        return FALSE;
-    }
-    if ((format = strchr(source, ':')) != NULL) {
-        *format = '\0';
-        format = format + 1;
-    }
-
-    if (!format) {
-        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
-                    _("Missing disk format string on %s"), disk);
-        return FALSE;
+    if (format) {
+        if ((diskFormat = gvir_sandbox_config_disk_format_from_str(format)) < 0) {
+            g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
+                        _("Unknown disk format on %s"), opt);
+            return FALSE;
+        }
+        
+        gvir_config_domain_disk_driver_set_format(diskDriver,GVIR_CONFIG_DOMAIN_DISK_FORMAT_QCOW2);
     }
 
-    if (strncmp(format,"qcow2",5) == 0) {
-       gvir_config_domain_disk_driver_set_format(diskDriver,GVIR_CONFIG_DOMAIN_DISK_FORMAT_QCOW2);
-    }
-    else {
-        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
-                    _("Unimplemented disk format string on %s"), format);
-       	return FALSE;
-    }
-
-    dsk = GVIR_SANDBOX_CONFIG_DISK(g_object_new(GVIR_SANDBOX_TYPE_CONFIG_DISK,
-                                                "disktype",diskType,
+    diskConfig = GVIR_SANDBOX_CONFIG_DISK(g_object_new(GVIR_SANDBOX_TYPE_CONFIG_DISK,
+                                                "disktype",disk,
                                                 "target", target,
                                                 "source", source,
                                                 "diskdriver", diskDriver,
                                                 NULL));
 
-    gvir_sandbox_config_add_disk(config, dsk);
+    gvir_sandbox_config_add_disk(config, diskConfig);
 
-    g_object_unref(dsk);
-    g_object_unref(diskType);
+    g_object_unref(diskConfig);
+    g_object_unref(disk);
     g_object_unref(diskDriver);
 
-    g_free(target);
+    g_free(type);
 
     return TRUE;
 }
@@ -2116,6 +2109,26 @@ static gboolean gvir_sandbox_config_load_config(GVirSandboxConfig *config,
 }
 
 
+static void gvir_sandbox_config_save_config_disk(GVirSandboxConfigDisk *config,
+                                                 GKeyFile *file,
+                                                 guint i)
+{
+    gchar *key;
+    GVirConfigDomainDiskType type = gvir_sandbox_config_disk_get_disktype(config);
+    GVirConfigDomainDiskFormat format = gvir_sandbox_config_disk_get_diskformat(config);
+
+    key = g_strdup_printf("disk.%u", i);
+    g_key_file_set_string(file, key, "type",
+                          gvir_sandbox_config_disk_type_to_str(type));
+    g_key_file_set_string(file, key, "source",
+                          gvir_sandbox_config_disk_get_source(config));
+    g_key_file_set_string(file, key, "target",
+                          gvir_sandbox_config_disk_get_target(config));
+    g_key_file_set_string(file, key, "format",
+                          gvir_sandbox_config_disk_format_to_str(format));
+    g_free(key);
+}
+
 static void gvir_sandbox_config_save_config_mount(GVirSandboxConfigMount *config,
                                                   GKeyFile *file,
                                                   guint i)
@@ -2284,6 +2297,16 @@ static void gvir_sandbox_config_save_config(GVirSandboxConfig *config,
                                               file,
                                               i);
 
+        tmp = tmp->next;
+        i++;
+    }
+
+    i = 0;
+    tmp = priv->disks;
+    while (tmp) {
+        gvir_sandbox_config_save_config_disk(tmp->data,
+                                             file,
+                                             i);
         tmp = tmp->next;
         i++;
     }

@@ -68,6 +68,11 @@ GVirConfigDomainDiskType gvir_sandbox_config_disk_get_disktype(GVirSandboxConfig
 
 GVirConfigDomainDiskFormat gvir_sandbox_config_disk_get_diskformat(GVirSandboxConfigDisk *config);
 
+const gchar *gvir_sandbox_config_disk_type_to_str(GVirConfigDomainDiskType type);
+gint gvir_sandbox_config_disk_type_from_str(const gchar *value);
+const gchar *gvir_sandbox_config_disk_format_to_str(GVirConfigDomainDiskFormat format);
+gint gvir_sandbox_config_disk_format_from_str(const gchar *value);
+
 G_END_DECLS
 
 #endif /* __LIBVIRT_SANDBOX_CONFIG_DISK_H__ */
