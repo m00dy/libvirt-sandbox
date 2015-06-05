@@ -57,6 +57,13 @@ int main(int argc, char **argv)
         "host-bind:/tmp=",
         NULL
     };
+    const gchar *disks[] = {
+        "file:hda=/tmp/img.blah:qcow2",
+        "file:hda=/tmp/img.qcow2",
+        "file:hda=/tmp/img.qcow2:raw",
+        "file:hda=/tmp/img.img",
+        NULL
+    };
     const gchar *includes[] = {
         "/etc/nswitch.conf",
         "/etc/resolve.conf",
@@ -93,6 +100,9 @@ int main(int argc, char **argv)
     gvir_sandbox_config_set_homedir(cfg1, "/var/run/hell");
 
     if (!gvir_sandbox_config_add_mount_strv(cfg1, (gchar**)mounts, &err))
+        goto cleanup;
+
+    if (!gvir_sandbox_config_add_disk_strv(cfg1, (gchar**)disks, &err))
         goto cleanup;
 
     if (!gvir_sandbox_config_add_host_include_strv(cfg1, (gchar**)includes, &err))
@@ -140,8 +150,8 @@ cleanup:
     if (cfg2)
         g_object_unref(cfg2);
 
-    unlink("test1.cfg");
-    unlink("test2.cfg");
+/*    unlink("test1.cfg");
+    unlink("test2.cfg"); */
     exit(ret);
 }
 
