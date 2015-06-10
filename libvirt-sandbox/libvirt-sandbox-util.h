@@ -29,6 +29,12 @@
 
 G_BEGIN_DECLS
 
+gint gvir_sandbox_util_guess_image_format(const gchar *path);
+
+const gchar *gvir_sandbox_util_disk_format_to_str(GVirConfigDomainDiskFormat format);
+
+gint gvir_sandbox_util_disk_format_from_str(const gchar *value);
+
 /**
  * LIBVIRT_SANDBOX_CLASS_PADDING: (skip)
  */
