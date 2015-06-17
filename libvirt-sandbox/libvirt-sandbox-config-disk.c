@@ -289,6 +289,15 @@ gint gvir_sandbox_config_disk_type_from_str(const gchar *value)
     return -1;
 }
 
+const gchar *gvir_sandbox_config_disk_format_to_str(GVirConfigDomainDiskFormat format)
+{
+    GEnumClass *klass = g_type_class_ref(GVIR_CONFIG_TYPE_DOMAIN_DISK_FORMAT);
+    GEnumValue *value = g_enum_get_value(klass, format);
+    gchar * dupstr = g_strdup (value->value_nick);
+    g_type_class_unref(klass);
+    return dupstr;
+}
+
 /*
  * Local variables:
  *  c-indent-level: 4

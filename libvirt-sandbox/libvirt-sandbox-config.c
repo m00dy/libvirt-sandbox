@@ -1271,14 +1271,14 @@ gboolean gvir_sandbox_config_add_disk_opts(GVirSandboxConfig *config,
         formatStr = tmp + 1;
 
         if ((strncmp(formatStr, "format=", 7) != 0) ||
-                (format = gvir_sandbox_util_disk_format_from_str(formatStr + 7)) < 0){
+                (format = gvir_sandbox_util_disk_format_from_str(formatStr + 7, error)) < 0){
                 g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
                             _("Unknown disk image format: '%s'"), formatStr + 7);
                 return FALSE;
         }
     } 
     else {
-        if ((format = gvir_sandbox_util_guess_image_format(source)) < 0) {
+        if ((format = gvir_sandbox_util_guess_image_format(source, error)) < 0) {
            format = GVIR_CONFIG_DOMAIN_DISK_FORMAT_RAW;
         }
     }
@@ -1964,7 +1964,7 @@ static GVirSandboxConfigDisk *gvir_sandbox_config_load_config_disk(GKeyFile *fil
         goto cleanup;
     }
 
-    if ((format = gvir_sandbox_util_disk_format_from_str(formatStr)) < 0) {
+    if ((format = gvir_sandbox_util_disk_format_from_str(formatStr, error)) < 0) {
         g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
                     _("Unknown disk format %s in config file"), formatStr);
         goto error;
@@ -2254,7 +2254,7 @@ static void gvir_sandbox_config_save_config_disk(GVirSandboxConfigDisk *config,
     g_key_file_set_string(file, key, "target",
                           gvir_sandbox_config_disk_get_target(config));
     g_key_file_set_string(file, key, "format",
-                          gvir_sandbox_util_disk_format_to_str(format));
+                          gvir_sandbox_config_disk_format_to_str(format));
     g_free(key);
 }
 

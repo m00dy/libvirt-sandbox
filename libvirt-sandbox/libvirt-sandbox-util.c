@@ -20,32 +20,24 @@
  * Author: Eren Yagdiran <erenyagdiran@gmail.com>
  */
 
-#include <config.h>
 #include <string.h>
+#include <errno.h>
+#include <config.h>
+#include <glib/gi18n.h>
 
 #include "libvirt-sandbox/libvirt-sandbox.h"
 
-/* This array contains string values for GVirConfigDomainDiskFormat,
- * order is important.*/
-static const gchar *FORMATS_STRINGS[] = {
-    "raw",
-    "dir",
-    "bochs",
-    "cloop",
-    "cow",
-    "dmg",
-    "iso",
-    "qcow",
-    "qcow2",
-    "qed",
-    "vmdk",
-    "vpc",
-    "fat",
-    "vhd",
-    NULL
-};
+#define GVIR_SANDBOX_UTIL_ERROR gvir_sandbox_util_error_quark()
 
-gint gvir_sandbox_util_guess_image_format(const gchar *path){
+static GQuark
+gvir_sandbox_util_error_quark(void)
+{
+    return g_quark_from_static_string("gvir-sandbox-util");
+}
+
+gint gvir_sandbox_util_guess_image_format(const gchar *path,
+                                          GError **error)
+{
 
     gchar *tmp;
 
@@ -58,22 +50,28 @@ gint gvir_sandbox_util_guess_image_format(const gchar *path){
        return GVIR_CONFIG_DOMAIN_DISK_FORMAT_RAW;
     }
     
-    return gvir_sandbox_util_disk_format_from_str(tmp);
+    return gvir_sandbox_util_disk_format_from_str(tmp, error);
 }
 
-gint gvir_sandbox_util_disk_format_from_str(const gchar *value)
+gint gvir_sandbox_util_disk_format_from_str(const gchar *value,
+                                            GError **error)
 {
-    gint i = 0;
-
-    while (FORMATS_STRINGS[i] != NULL) {
-       	if (strcmp(FORMATS_STRINGS[i], value) == 0)
-            return i;
-        i++;
+    GEnumClass *enum_class = g_type_class_ref(GVIR_CONFIG_TYPE_DOMAIN_DISK_FORMAT);
+    GEnumValue *enum_value;
+    if (!(enum_value = g_enum_get_value_by_nick(enum_class, value))) {
+                g_type_class_unref(enum_class);
+                g_set_error(error, GVIR_SANDBOX_UTIL_ERROR, 0,
+                            _("Unknown disk format %s in config file"), value);
+                goto error;
     }
+    return enum_value->value;
+
+cleanup:
     return -1;
+
+error:
+    g_type_class_unref(enum_class);
+    goto cleanup;
+
 }
 
-const gchar *gvir_sandbox_util_disk_format_to_str(GVirConfigDomainDiskFormat format)
-{
-    return FORMATS_STRINGS[format];
-}
