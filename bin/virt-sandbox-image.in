@@ -1,0 +1,3 @@
+#!/bin/sh
+
+exec "@pkgpythondir@/virt-sandbox-image.py" "$@"

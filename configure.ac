@@ -124,11 +124,13 @@ dnl Should be in m4/virt-gettext.m4 but intltoolize is too
 dnl dumb to find it there
 IT_PROG_INTLTOOL([0.35.0])
 
+AM_PATH_PYTHON
 
 AC_OUTPUT(Makefile
           libvirt-sandbox/Makefile
           libvirt-sandbox/tests/Makefile
           bin/Makefile
+          virt-sandbox-image/Makefile
           examples/Makefile
           docs/Makefile
           docs/libvirt-sandbox/Makefile

@@ -56,3 +56,4 @@ bin/virt-sandbox
 bin/virt-sandbox-service-util
 build/
 bin/*.1
+bin/virt-sandbox-image

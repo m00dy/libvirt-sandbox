@@ -3,7 +3,11 @@ bin_PROGRAMS = virt-sandbox
 
 libexec_PROGRAMS = virt-sandbox-service-util
 
-bin_SCRIPTS = virt-sandbox-service
+bin_SCRIPTS = virt-sandbox-service \
+              virt-sandbox-image
+
+virt-sandbox-image: virt-sandbox-image.in
+	sed -e 's,[@]pkgpythondir[@],$(pkgpythondir),g' < $< >$@
 
 virtsandboxcompdir = $(datarootdir)/bash-completion/completions/
 
@@ -20,8 +24,11 @@ POD_FILES = \
 	virt-sandbox-service-reload.pod \
 	virt-sandbox-service-upgrade.pod \
 	$(NULL)
-EXTRA_DIST = $(bin_SCRIPTS) $(POD_FILES) virt-sandbox-service-bash-completion.sh virt-sandbox-service.logrotate
-EXTRA_DIST += virt-sandbox-service-bash-completion.sh
+EXTRA_DIST = virt-sandbox-service \
+             virt-sandbox-image.in \
+             $(POD_FILES) \
+             virt-sandbox-service-bash-completion.sh \
+             virt-sandbox-service.logrotate
 
 man1_MANS = \
 	virt-sandbox.1 \
@@ -64,7 +71,8 @@ virt-sandbox-service-reload.1: virt-sandbox-service-reload.pod Makefile
 virt-sandbox-service-upgrade.1: virt-sandbox-service-upgrade.pod Makefile
 	$(AM_V_GEN)$(POD2MAN) $< $(srcdir)/$@
 
-CLEANFILES = $(man1_MANS)
+CLEANFILES = $(man1_MANS) \
+             virt-sandbox-image
 
 virt_sandbox_SOURCES = virt-sandbox.c
 virt_sandbox_CFLAGS = \
