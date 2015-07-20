@@ -33,3 +33,7 @@ class Source():
     @abstractmethod
     def create_template(self,**args):
       pass
+
+    @abstractmethod
+    def delete_template(self,**args):
+      pass
