@@ -128,6 +128,31 @@ def check_connect(connectstr):
             raise ValueError("%s is not supported by Virt-sandbox" %connectstr)
         return True
 
+def run(args):
+    try:
+        if args.connect is not None:
+            check_connect(args.connect)
+        source = dynamic_source_loader(args.source)
+        diskfile,configfile = source.get_disk(name=args.name,templatedir=args.template_dir)
+
+        format = "qcow2"
+        commandToRun = args.igniter
+        if commandToRun is None:
+            commandToRun = source.get_command(configfile)
+        cmd = ['virt-sandbox']
+        if args.connect is not None:
+            cmd.append("-c")
+            cmd.append(args.connect)
+        params = ['-m','host-image:/=%s,format=%s' %(diskfile,format),
+               '--',
+               commandToRun]
+        cmd = cmd + params
+        subprocess.call(cmd)
+        subprocess.call(["rm", "-rf", diskfile])
+
+    except Exception,e:
+        print "Run Error %s" % str(e)
+
 def requires_name(parser):
     parser.add_argument("name",
                         help=_("name of the template"))
