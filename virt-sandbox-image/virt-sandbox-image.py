@@ -122,6 +122,12 @@ def create(args):
     except Exception,e:
         print "Create Error %s" % str(e)
 
+def check_connect(connectstr):
+        supportedDrivers = ['lxc:///','qemu:///session','qemu:///system']
+        if not connectstr in supportedDrivers:
+            raise ValueError("%s is not supported by Virt-sandbox" %connectstr)
+        return True
+
 def requires_name(parser):
     parser.add_argument("name",
                         help=_("name of the template"))
