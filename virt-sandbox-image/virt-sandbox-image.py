@@ -178,6 +178,18 @@ def gen_create_args(subparser):
                         help=_("format format for image"))
     parser.set_defaults(func=create)
 
+def gen_run_args(subparser):
+    parser = subparser.add_parser("run",
+                                  help=_("Run a already built image"))
+    requires_name(parser)
+    requires_source(parser)
+    requires_connect(parser)
+    parser.add_argument("-t","--template-dir",
+                        help=_("Template directory for saving templates"))
+    parser.add_argument("-i","--igniter",
+                        help=_("Igniter command for image"))
+    parser.set_defaults(func=run)
+
 if __name__ == '__main__':
     runtime_dir_resolver()
     parser = argparse.ArgumentParser(description='Sandbox Container Image Tool')
@@ -185,6 +197,7 @@ if __name__ == '__main__':
     gen_download_args(subparser)
     gen_delete_args(subparser)
     gen_create_args(subparser)
+    gen_run_args(subparser)
 
     try:
         args = parser.parse_args()
