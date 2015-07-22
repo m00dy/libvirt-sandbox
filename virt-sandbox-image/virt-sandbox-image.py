@@ -31,6 +31,8 @@ import shutil
 import sys
 import urllib2
 import subprocess
+import random
+import string
 
 template_dir = None
 storage_dir = None
@@ -128,6 +130,12 @@ def check_connect(connectstr):
             raise ValueError("%s is not supported by Virt-sandbox" %connectstr)
         return True
 
+def requires_id(parser):
+    randomid = ''.join(random.choice(string.lowercase) for i in range(10))
+    parser.add_argument("-d","--id",
+                        default=randomid,
+                        help=_("id of the running sandbox"))
+
 def requires_name(parser):
     parser.add_argument("name",
                         help=_("name of the template"))
@@ -187,6 +195,7 @@ def gen_create_args(subparser):
 def gen_run_args(subparser):
     parser = subparser.add_parser("run",
                                   help=_("Run a already built image"))
+    requires_id(parser)
     requires_name(parser)
     requires_source(parser)
     requires_connect(parser)

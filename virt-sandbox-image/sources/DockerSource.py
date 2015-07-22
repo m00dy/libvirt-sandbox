@@ -372,6 +372,22 @@ class DockerSource(Source):
                     parent = None
             imagetagid = parent
 
+    def get_disk(self,**args):
+        name = args['name']
+        destdir = args['templatedir']
+        sandboxid = args['id']
+        imageList = self._get_image_list(name,destdir)
+        toplayer = imageList[0]
+        diskfile = destdir + "/" + toplayer + "/template.qcow2"
+        configfile = destdir + "/" + toplayer + "/template.json"
+        tempfile = destdir + "/" + toplayer + "/" + sandboxid + ".qcow2"
+        cmd = ["qemu-img","create","-q","-f","qcow2"]
+        cmd.append("-o")
+        cmd.append("backing_fmt=qcow2,backing_file=%s" % diskfile)
+        cmd.append(tempfile)
+        subprocess.call(cmd)
+        return (tempfile,configfile)
+
     def get_command(self,configfile):
         configParser = DockerConfParser(configfile)
         commandToRun = configParser.getRunCommand()
