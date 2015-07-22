@@ -37,3 +37,7 @@ class Source():
     @abstractmethod
     def delete_template(self,**args):
       pass
+
+    @abstractmethod
+    def get_command(self,**args):
+      pass

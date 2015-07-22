@@ -29,6 +29,15 @@ import os
 import subprocess
 import shutil
 
+class DockerConfParser():
+
+    def __init__(self,jsonfile):
+        with open(jsonfile) as json_file:
+            self.json_data = json.load(json_file)
+    def getRunCommand(self):
+        cmd = self.json_data['container_config']['Cmd'][2]
+        return cmd[cmd.index('"') + 1:cmd.rindex('"')]
+
 class DockerSource(Source):
 
     www_auth_username = None
@@ -362,6 +371,11 @@ class DockerSource(Source):
                     debug("Parent %s is shared\n" % parent)
                     parent = None
             imagetagid = parent
+
+    def get_command(self,configfile):
+        configParser = DockerConfParser(configfile)
+        commandToRun = configParser.getRunCommand()
+        return commandToRun
 
 def debug(msg):
     sys.stderr.write(msg)
