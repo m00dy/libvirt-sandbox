@@ -28,6 +28,8 @@ import traceback
 import os
 import subprocess
 import shutil
+import random
+import string
 
 class DockerConfParser():
 
@@ -371,6 +373,22 @@ class DockerSource(Source):
                     debug("Parent %s is shared\n" % parent)
                     parent = None
             imagetagid = parent
+
+    def get_disk(self,**args):
+        name = args['name']
+        destdir = args['templatedir']
+        imageList = self._get_image_list(name,destdir)
+        toplayer = imageList[0]
+        diskfile = destdir + "/" + toplayer + "/template.qcow2"
+        configfile = destdir + "/" + toplayer + "/template.json"
+        tempfile = ''.join(random.choice(string.lowercase) for i in range(10))
+        tempfile = destdir + "/" + toplayer + "/" + tempfile + ".qcow2"
+        cmd = ["qemu-img","create","-q","-f","qcow2"]
+        cmd.append("-o")
+        cmd.append("backing_fmt=qcow2,backing_file=%s" % diskfile)
+        cmd.append(tempfile)
+        subprocess.call(cmd)
+        return (tempfile,configfile)
 
     def get_command(self,configfile):
         configParser = DockerConfParser(configfile)
