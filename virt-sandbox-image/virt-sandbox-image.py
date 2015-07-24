@@ -143,9 +143,13 @@ def run(args):
         if args.connect is not None:
             cmd.append("-c")
             cmd.append(args.connect)
-        params = ['-m','host-image:/=%s,format=%s' %(diskfile,format),
-               '--',
-               commandToRun]
+        params = ['-m','host-image:/=%s,format=%s' %(diskfile,format)]
+        networkArgs = args.network
+        if networkArgs is not None:
+            params.append('-N')
+            params.append(networkArgs)
+        params.append('--')
+        params.append(commandToRun)
         cmd = cmd + params
         subprocess.call(cmd)
         subprocess.call(["rm", "-rf", diskfile])
@@ -219,6 +223,8 @@ def gen_run_args(subparser):
                         help=_("Template directory for saving templates"))
     parser.add_argument("-i","--igniter",
                         help=_("Igniter command for image"))
+    parser.add_argument("-n","--network",
+                        help=_("Network params for running template"))
     parser.set_defaults(func=run)
 
 if __name__ == '__main__':
