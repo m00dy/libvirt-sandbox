@@ -28,6 +28,7 @@ import traceback
 import os
 import subprocess
 import shutil
+import collections
 
 class DockerConfParser():
 
@@ -37,6 +38,13 @@ class DockerConfParser():
     def getRunCommand(self):
         cmd = self.json_data['container_config']['Cmd'][2]
         return cmd[cmd.index('"') + 1:cmd.rindex('"')]
+    def getVolumes(self):
+        volumes = self.json_data['container_config']['Volumes']
+        volumelist = []
+        if isinstance(volumes,collections.Iterable):
+          for key,value in volumes.iteritems():
+            volumelist.append(key)
+        return volumelist
 
 class DockerSource(Source):
 
@@ -392,6 +400,10 @@ class DockerSource(Source):
         configParser = DockerConfParser(configfile)
         commandToRun = configParser.getRunCommand()
         return commandToRun
+
+    def get_volume(self,configfile):
+        configParser = DockerConfParser(configfile)
+        return configParser.getVolumes()
 
 def debug(msg):
     sys.stderr.write(msg)

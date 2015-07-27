@@ -132,6 +132,7 @@ def check_connect(connectstr):
 
 def run(args):
     try:
+        global storage_dir
         if args.connect is not None:
             check_connect(args.connect)
         source = dynamic_source_loader(args.source)
@@ -150,6 +151,25 @@ def run(args):
         if networkArgs is not None:
             params.append('-N')
             params.append(networkArgs)
+        allVolumes = source.get_volume(configfile)
+        volumeArgs = args.volume
+        if volumeArgs is not None:
+            allVolumes = allVolumes + volumeArgs
+        for volume in allVolumes:
+            volumeSplit = volume.split(":")
+            volumelen = len(volumeSplit)
+            if volumelen == 2:
+                hostPath = volumeSplit[0]
+                guestPath = volumeSplit[1]
+            elif volumelen == 1:
+                guestPath = volumeSplit[0]
+                hostPath = storage_dir + guestPath
+                if not os.path.exists(hostPath):
+                    os.makedirs(hostPath)
+            else:
+                pass
+            params.append("--mount")
+            params.append("host-bind:%s=%s" %(guestPath,hostPath))
         params.append('--')
         params.append(commandToRun)
         cmd = cmd + params
@@ -234,6 +254,8 @@ def gen_run_args(subparser):
                         help=_("Igniter command for image"))
     parser.add_argument("-n","--network",
                         help=_("Network params for running template"))
+    parser.add_argument("-v","--volume",action="append",
+                        help=_("Volume params for running template"))
     parser.set_defaults(func=run)
 
 if __name__ == '__main__':
