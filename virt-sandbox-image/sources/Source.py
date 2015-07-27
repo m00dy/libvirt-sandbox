@@ -45,3 +45,7 @@ class Source():
     @abstractmethod
     def get_disk(self,**args):
       pass
+
+    @abstractmethod
+    def get_volume(self,**args):
+      pass
