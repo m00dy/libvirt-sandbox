@@ -23,6 +23,7 @@ POD_FILES = \
 	virt-sandbox-service-delete.pod \
 	virt-sandbox-service-reload.pod \
 	virt-sandbox-service-upgrade.pod \
+	virt-sandbox-image.pod \
 	$(NULL)
 EXTRA_DIST = virt-sandbox-service \
              virt-sandbox-image.in \
@@ -40,6 +41,7 @@ man1_MANS = \
 	virt-sandbox-service-delete.1 \
 	virt-sandbox-service-reload.1 \
 	virt-sandbox-service-upgrade.1 \
+	virt-sandbox-image.1 \
 	$(NULL)
 
 POD2MAN = pod2man -c "Virtualization Support" -r "$(PACKAGE)-$(VERSION)"
@@ -69,6 +71,9 @@ virt-sandbox-service-reload.1: virt-sandbox-service-reload.pod Makefile
 	$(AM_V_GEN)$(POD2MAN) $< $(srcdir)/$@
 
 virt-sandbox-service-upgrade.1: virt-sandbox-service-upgrade.pod Makefile
+	$(AM_V_GEN)$(POD2MAN) $< $(srcdir)/$@
+
+virt-sandbox-image.1: virt-sandbox-image.pod Makefile
 	$(AM_V_GEN)$(POD2MAN) $< $(srcdir)/$@
 
 CLEANFILES = $(man1_MANS) \

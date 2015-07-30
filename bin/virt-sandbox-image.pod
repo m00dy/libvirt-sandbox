@@ -1,0 +1,172 @@
+=head1 NAME
+
+virt-sandbox-image - Sandbox Container Image Tool
+
+=head1 SYNOPSIS
+
+  {download,create,run,delete}
+
+  commands:
+
+    download              Download template data
+
+    create                Create image from template data
+
+    run                   Run an already built image
+
+    delete                Delete template data
+
+=head1 DESCRIPTION
+
+virt-sandbox-image.py is a sandbox container image tool developed in python.
+This tool can download,create,run and delete templates which are provided by
+different sources. This tool comes with Docker source by default. Other sources
+can be implemented by extending source class
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<download name -s source -r registry -u username -p password -t template_directory>
+
+Download a template by given name with a specified source.
+
+=over 6
+
+=item B<name>
+
+Template name to download
+
+=item B<-s or --source>
+
+Source parameter will try load source module under sources/ directory. Each source has to implement Source.py base class and register itself with a proper name
+Default source is Docker.
+
+=item B<-r or --registry>
+
+Custom registry url for downloading data. This might need privileged credentials which can be specified by --username and --password parameters.
+
+=item B<-u or --username>
+
+Username for custom registry authentication
+
+=item B<-p or --password>
+
+Password for custom registry authentication
+
+=item B<-t or --template-dir>
+
+Custom directory for downloading template data
+
+=back
+
+=item B<create name imagepath format -s source -d driver>
+
+Create already downloaded template into image with given format.
+
+=over 5
+
+=item B<name>
+
+Template name to download.
+
+=item B<imagepath>
+
+Image path where template image will be stored.
+
+=item B<format>
+
+Image format e.g qcow2
+
+=item B<-s or --source>
+
+Source parameter will try load source module under sources/ directory. Each source has to implement Source.py base class and register itself with a proper name
+Default source is Docker.
+
+=item B<-d or --driver>
+
+Driver parameter can be specified with only supported driver by libvirt-sandbox. These are lxc:///, qemu:///session, qemu:///system.
+
+=back
+
+=item B<run name imagepath format -c command -n network -v volume -s source -d driver>
+
+Run already built image.
+
+=over 6
+
+=item B<name>
+
+Template name to download.
+
+=item B<imagepath>
+
+Image path where template image will be stored.
+
+=item B<-c or --command>
+
+Command for running a image. If it is not specified, virt-sandbox-image will try to load command params from specified source. E.g /bin/bash
+
+=item B<-n or --network>
+
+Network params will be passed directly to the virt-sandbox. More information about network params, See C<virt-sandbox(8)>
+
+=item B<-v or --volume>
+
+Volume params are for binding host-paths to the guest. E.g -v /home:/home will map /home directory from host to the guest.
+
+=item B<-d or --driver>
+
+Driver parameter can be specified with only supported driver by libvirt-sandbox. These are lxc:///, qemu:///session, qemu:///system.
+
+=back
+
+=item B<delete name imagepath -s source >
+
+Delete downloaded template data and its built image.
+
+=over 3
+
+=item B<name>
+
+Template name to delete.
+
+=item B<imagepath>
+
+Image path where template data or image stays.
+
+=item B<-s or --source>
+
+Source parameter will try load source module under sources/ directory. Each source has to implement Source.py base class and register itself with a proper name
+Default source is Docker.
+
+=back
+
+=back
+
+=head1 SEE ALSO
+
+C<virt-sandbox(8)>
+
+=head1 FILES
+
+Container content will be stored in subdirectories of
+/var/lib/libvirt/templates, by default.
+
+=head1 AUTHORS
+
+Daniel P. Berrange <dan@berrange.com>
+
+Eren Yagdiran <erenyagdiran@gmail.com>
+
+=head1 COPYRIGHT
+
+Copyright (C) 2013 Red Hat, Inc.
+Copyright (C) 2015 Universitat Politecnica de Catalunya.
+
+=head1 LICENSE
+
+virt-sandbox-image is distributed under the terms of the GNU LGPL v2+.
+This is free software; see the source for copying conditions.
+There is NO warranty; not even for MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE
