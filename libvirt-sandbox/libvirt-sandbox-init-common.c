@@ -336,6 +336,33 @@ static gboolean setup_network(GVirSandboxConfig *config, GError **error)
 }
 
 
+static gboolean setup_custom_env(GVirSandboxConfig *config, GError **error)
+{
+    GList *envs, *tmp;
+    gboolean ret = FALSE;
+    gchar *key = NULL;
+    gchar *value = NULL;
+
+    envs = tmp = gvir_sandbox_config_get_envs(config);
+
+    while (tmp) {
+        GVirSandboxConfigEnv *env = GVIR_SANDBOX_CONFIG_ENV(tmp->data);
+        key = g_strdup(gvir_sandbox_config_env_get_key(env));
+        value = g_strdup(gvir_sandbox_config_env_get_value(env));
+        if(setenv(key,value,1)!=0)
+            goto cleanup;
+        g_free(key);
+        g_free(value);
+        tmp = tmp->next;
+    }
+
+    ret = TRUE;
+ cleanup:
+    g_list_foreach(envs, (GFunc)g_object_unref, NULL);
+    g_list_free(envs);
+    return ret;
+}
+
 static int change_user(const gchar *user,
                        uid_t uid,
                        gid_t gid,
@@ -1261,6 +1288,9 @@ int main(int argc, char **argv) {
 
     if (!setup_disk_tags())
         exit(EXIT_FAILURE);
+
+    if (!setup_custom_env(config, &error))
+        goto error;
 
     if (!setup_network(config, &error))
         goto error;
