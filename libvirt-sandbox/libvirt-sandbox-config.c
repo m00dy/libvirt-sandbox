@@ -64,6 +64,7 @@ struct _GVirSandboxConfigPrivate
     GList *networks;
     GList *mounts;
     GList *disks;
+    GList *envs;
 
     gchar *secLabel;
     gboolean secDynamic;
@@ -275,6 +276,9 @@ static void gvir_sandbox_config_finalize(GObject *object)
 
     g_list_foreach(priv->networks, (GFunc)g_object_unref, NULL);
     g_list_free(priv->networks);
+
+    g_list_foreach(priv->envs, (GFunc)g_object_unref, NULL);
+    g_list_free(priv->envs);
 
     g_list_foreach(priv->disks, (GFunc)g_object_unref, NULL);
     g_list_free(priv->disks);
@@ -1144,6 +1148,114 @@ gboolean gvir_sandbox_config_has_networks(GVirSandboxConfig *config)
     return priv->networks ? TRUE : FALSE;
 }
 
+/**
+ * gvir_sandbox_config_add_env:
+ * @config: (transfer none): the sandbox config
+ * @dsk: (transfer none): the env configuration
+ *
+ * Adds a new environment variable to the sandbox
+ *
+ */
+void gvir_sandbox_config_add_env(GVirSandboxConfig *config,
+                                 GVirSandboxConfigEnv *env)
+{
+    GVirSandboxConfigPrivate *priv = config->priv;
+
+    g_object_ref(env);
+
+    priv->envs = g_list_append(priv->envs, env);
+}
+
+/**
+ * gvir_sandbox_config_get_envs:
+ * @config: (transfer none): the sandbox config
+ *
+ * Retrieves the list of custom environment list in the sandbox
+ *
+ * Returns: (transfer full) (element-type GVirSandboxConfigMount): the list of environment variables
+ */
+GList *gvir_sandbox_config_get_envs(GVirSandboxConfig *config)
+{
+    GVirSandboxConfigPrivate *priv = config->priv;
+    g_list_foreach(priv->envs, (GFunc)g_object_ref, NULL);
+    return g_list_copy(priv->envs);
+}
+
+/**
+ * gvir_sandbox_config_add_env_strv:
+ * @config: (transfer none): the sandbox config
+ * @envs: (transfer none)(array zero-terminated=1): the list of environment variables
+ *
+ * Parses @envs whose elements are in the format KEY=VALUE
+ *
+ * --env KEY=VALUE
+ */
+gboolean gvir_sandbox_config_add_env_strv(GVirSandboxConfig *config,
+                                          gchar **envs,
+                                          GError **error)
+{
+    gsize i = 0;
+    while (envs && envs[i]) {
+        if (!gvir_sandbox_config_add_env_opts(config,
+                                               envs[i],
+                                               error))
+            return FALSE;
+        i++;
+    }
+    return TRUE;
+}
+
+/**
+ * gvir_sandbox_config_add_env_opts:
+ * @config: (transfer none): the sandbox config
+ * @disk: (transfer none): the env config
+ *
+ * Parses @env in the format KEY=VALUE
+ * creating #GVirSandboxConfigEnv instances for each element. For
+ * example
+ *
+ * --env KEY=VALUE
+ */
+
+gboolean gvir_sandbox_config_add_env_opts(GVirSandboxConfig *config,
+                                           const char *opt,
+                                           GError **error)
+{
+    gchar *tmp = NULL;
+    gchar *key = NULL;
+    gchar *value = NULL;
+    GVirSandboxConfigEnv *envConfig;
+
+    if (!(tmp = g_strdup(opt)))
+        return FALSE;
+
+    key  = strchr(tmp, '=');
+
+    if (!key) {
+        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
+                    _("Wrong environment format on %s"), opt);
+        return FALSE;
+    }
+
+    *key = '\0';
+    value = key + 1;
+    envConfig = GVIR_SANDBOX_CONFIG_ENV(g_object_new(GVIR_SANDBOX_TYPE_CONFIG_ENV,
+                                                "key", tmp,
+                                                "value", value,
+                                                NULL));
+
+    gvir_sandbox_config_add_env(config, envConfig);
+
+    g_object_unref(envConfig);
+    g_free(tmp);
+    return TRUE;
+}
+
+gboolean gvir_sandbox_config_has_envs(GVirSandboxConfig *config)
+{
+    GVirSandboxConfigPrivate *priv = config->priv;
+    return priv->envs != NULL;
+}
 
 /**
  * gvir_sandbox_config_add_disk:
@@ -1162,7 +1274,6 @@ void gvir_sandbox_config_add_disk(GVirSandboxConfig *config,
 
     priv->disks = g_list_append(priv->disks, dsk);
 }
-
 
 /**
  * gvir_sandbox_config_get_disks:
@@ -1949,6 +2060,44 @@ static GVirSandboxConfigMount *gvir_sandbox_config_load_config_mount(GKeyFile *f
     goto cleanup;
 }
 
+static GVirSandboxConfigEnv *gvir_sandbox_config_load_config_env(GKeyFile *file,
+                                                                   guint i,
+                                                                   GError **error)
+{
+    GVirSandboxConfigEnv *config = NULL;
+    gchar *index = NULL;
+    gchar *key = NULL;
+    gchar *value = NULL;
+    GError *e = NULL;
+
+    index = g_strdup_printf("env.%u", i);
+    if ((key = g_key_file_get_string(file, index, "key", &e)) == NULL) {
+        if (e->code == G_KEY_FILE_ERROR_GROUP_NOT_FOUND) {
+            g_error_free(e);
+            return NULL;
+        }
+        g_error_free(e);
+        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
+                    "%s", _("Missing environment key in config file"));
+        goto cleanup;
+    }
+    if ((value = g_key_file_get_string(file, index, "value", NULL)) == NULL) {
+        g_set_error(error, GVIR_SANDBOX_CONFIG_ERROR, 0,
+                    "%s", _("Missing environment value in config file"));
+        goto cleanup;
+    }
+
+    config = GVIR_SANDBOX_CONFIG_ENV(g_object_new(GVIR_SANDBOX_TYPE_CONFIG_ENV,
+                                                   "key", key,
+                                                   "value", value,
+                                                   NULL));
+
+ cleanup:
+    g_free(key);
+    g_free(value);
+    g_free(index);
+    return config;
+}
 
 static GVirSandboxConfigDisk *gvir_sandbox_config_load_config_disk(GKeyFile *file,
                                                                    guint i,
@@ -2244,6 +2393,14 @@ static gboolean gvir_sandbox_config_load_config(GVirSandboxConfig *config,
             priv->mounts = g_list_append(priv->mounts, mount);
     }
 
+    for (i = 0 ; i < 1024 ; i++) {
+        GVirSandboxConfigEnv *env;
+        if (!(env = gvir_sandbox_config_load_config_env(file, i, error)) &&
+            *error)
+            goto cleanup;
+        if (env)
+            priv->envs = g_list_append(priv->envs, env);
+    }
 
     for (i = 0 ; i < 1024 ; i++) {
         GVirSandboxConfigDisk *disk;
@@ -2274,6 +2431,24 @@ static gboolean gvir_sandbox_config_load_config(GVirSandboxConfig *config,
     return ret;
 }
 
+static void gvir_sandbox_config_save_config_env(GVirSandboxConfigEnv *config,
+                                                 GKeyFile *file,
+                                                 guint i)
+{
+    gchar *index = NULL;
+    gchar *key = NULL;
+    gchar *value = NULL;
+
+    index = g_strdup_printf("env.%u", i);
+    key = g_strdup(gvir_sandbox_config_env_get_key(config));
+    value = g_strdup(gvir_sandbox_config_env_get_value(config));
+    g_key_file_set_string(file, index, "key",key);
+    g_key_file_set_string(file, index, "value",value);
+
+    g_free(index);
+    g_free(key);
+    g_free(value);
+}
 
 static void gvir_sandbox_config_save_config_disk(GVirSandboxConfigDisk *config,
                                                  GKeyFile *file,
@@ -2480,6 +2655,16 @@ static void gvir_sandbox_config_save_config(GVirSandboxConfig *config,
                                               file,
                                               i);
 
+        tmp = tmp->next;
+        i++;
+    }
+
+    i = 0;
+    tmp = priv->envs;
+    while (tmp) {
+        gvir_sandbox_config_save_config_env(tmp->data,
+                                             file,
+                                             i);
         tmp = tmp->next;
         i++;
     }

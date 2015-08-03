@@ -26,6 +26,12 @@ LIBVIRT_SANDBOX_0.6.0 {
 	gvir_sandbox_config_disk_get_type;
 	gvir_sandbox_config_has_disks;
 
+	gvir_sandbox_config_add_env;
+	gvir_sandbox_config_add_env_strv;
+	gvir_sandbox_config_add_env_opts;
+	gvir_sandbox_config_env_get_type;
+	gvir_sandbox_config_has_envs;
+
 	gvir_sandbox_config_mount_add_include;
 	gvir_sandbox_config_mount_get_includes;
 	gvir_sandbox_config_mount_get_target;
