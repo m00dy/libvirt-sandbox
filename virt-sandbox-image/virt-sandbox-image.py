@@ -32,6 +32,8 @@ import sys
 import urllib2
 import subprocess
 
+template_dir = None
+storage_dir = None
 default_privileged_template_dir = "/var/lib/libvirt/templates"
 default_home_dir = os.environ['HOME']
 default_unprivileged_template_dir = default_home_dir + "/.local/share/libvirt/templates"
@@ -39,6 +41,29 @@ default_privileged_storage_dir = default_privileged_template_dir + "/storage"
 default_unprivileged_storage_dir = default_unprivileged_template_dir + "/storage"
 debug = False
 verbose = False
+
+def check_dir_writable(path):
+    if not os.access(path,os.W_OK):
+        return False
+    return True
+
+def runtime_dir_resolver():
+    global default_privileged_template_dir
+    global default_privileged_storage_dir
+    global default_unprivileged_template_dir
+    global default_unprivileged_storage_dir
+    global template_dir
+    global storage_dir
+    if(check_dir_writable(default_privileged_template_dir)):
+        template_dir = default_privileged_template_dir
+        storage_dir = default_privileged_storage_dir
+        return
+    template_dir = default_unprivileged_template_dir
+    storage_dir = default_unprivileged_storage_dir
+    if not os.path.exists(template_dir):
+        os.makedirs(template_dir)
+    if not os.path.exists(storage_dir):
+        os.makedirs(storage_dir)
 
 sys.dont_write_byte_code = True
 
@@ -380,8 +405,8 @@ def gen_create_args(subparser):
     parser.set_defaults(func=create)
 
 if __name__ == '__main__':
+    runtime_dir_resolver()
     parser = argparse.ArgumentParser(description='Sandbox Container Image Tool')
-
     subparser = parser.add_subparsers(help=_("commands"))
     gen_download_args(subparser)
     gen_delete_args(subparser)
