@@ -49,3 +49,7 @@ class Source():
     @abstractmethod
     def get_volume(self,**args):
       pass
+
+    @abstractmethod
+    def get_env(self,**args):
+      pass

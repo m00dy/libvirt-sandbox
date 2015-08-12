@@ -170,6 +170,20 @@ def run(args):
                 pass
             params.append("--mount")
             params.append("host-bind:%s=%s" %(guestPath,hostPath))
+
+        allEnvs = source.get_env(configfile)
+        envArgs = args.env
+        if envArgs is not None:
+            allEnvs = allEnvs + envArgs
+        for env in allEnvs:
+            envsplit = env.split("=")
+            envlen = len(envsplit)
+            if envlen == 2:
+                params.append("--env")
+                params.append(env)
+            else:
+                pass
+
         params.append('--')
         params.append(commandToRun)
         cmd = cmd + params
@@ -256,6 +270,9 @@ def gen_run_args(subparser):
                         help=_("Network params for running template"))
     parser.add_argument("-v","--volume",action="append",
                         help=_("Volume params for running template"))
+    parser.add_argument("-e","--env",action="append",
+                        help=_("Environment params for running template"))
+
     parser.set_defaults(func=run)
 
 if __name__ == '__main__':
