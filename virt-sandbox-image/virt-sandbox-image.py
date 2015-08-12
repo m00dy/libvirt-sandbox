@@ -40,6 +40,8 @@ default_unprivileged_storage_dir = default_unprivileged_template_dir + "/storage
 debug = False
 verbose = False
 
+sys.dont_write_byte_code = True
+
 import importlib
 def dynamic_source_loader(name):
     name = name[0].upper() + name[1:]
