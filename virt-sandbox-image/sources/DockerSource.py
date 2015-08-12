@@ -47,6 +47,12 @@ class DockerConfParser():
           for key,value in volumes.iteritems():
             volumelist.append(key)
         return volumelist
+    def getEnvs(self):
+        lst = self.json_data['container_config']['Env']
+        if lst is not None and isinstance(lst,list):
+          return lst
+        else:
+          return []
 
 class DockerSource(Source):
 
@@ -406,6 +412,10 @@ class DockerSource(Source):
     def get_volume(self,configfile):
         configParser = DockerConfParser(configfile)
         return configParser.getVolumes()
+
+    def get_env(self,configfile):
+        configParser = DockerConfParser(configfile)
+        return configParser.getEnvs()
 
 def debug(msg):
     sys.stderr.write(msg)
