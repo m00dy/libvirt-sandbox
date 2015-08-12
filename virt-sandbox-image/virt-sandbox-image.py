@@ -32,6 +32,14 @@ import sys
 import urllib2
 import subprocess
 
+default_privileged_template_dir = "/var/lib/libvirt/templates"
+default_home_dir = os.environ['HOME']
+default_unprivileged_template_dir = default_home_dir + "/.local/share/libvirt/templates"
+default_privileged_storage_dir = default_privileged_template_dir + "/storage"
+default_unprivileged_storage_dir = default_unprivileged_template_dir + "/storage"
+debug = False
+verbose = False
+
 import importlib
 def dynamic_source_loader(name):
     name = name[0].upper() + name[1:]
